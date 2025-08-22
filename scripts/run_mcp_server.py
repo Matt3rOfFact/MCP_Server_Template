@@ -17,7 +17,7 @@ sys.path.insert(0, str(src_path))
 os.environ.setdefault("ENVIRONMENT", "development")
 os.environ.setdefault("LOG_LEVEL", "INFO")
 
-from mcp_server_template.stdio_server import main
+from mcp_server_template.stdio_server import run
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    run()

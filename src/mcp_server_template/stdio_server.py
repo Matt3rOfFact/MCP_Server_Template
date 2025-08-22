@@ -183,5 +183,10 @@ async def main():
     await app.run_stdio_async()
 
 
-if __name__ == "__main__":
+def run():
+    """Synchronous entry point for UV scripts."""
     asyncio.run(main())
+
+
+if __name__ == "__main__":
+    run()
