@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "mcp-server-template": {
+      "command": "uv",
+      "args": ["run", "python", "scripts/run_mcp_server.py"],
+      "cwd": ".",
+      "env": {
+        "ENVIRONMENT": "development",
+        "LOG_LEVEL": "INFO"
+      }
+    }
+  }
+}

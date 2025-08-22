@@ -43,6 +43,7 @@ api = [
 
 [project.scripts]
 mcp-server = "mcp_server_template.main:main"
+mcp-server-stdio = "mcp_server_template.stdio_server:main"
 
 [dependency-groups]
 dev = [
