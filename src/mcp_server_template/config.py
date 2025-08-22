@@ -2,7 +2,7 @@
 
 from typing import Any, Dict, List, Optional
 from pathlib import Path
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from enum import Enum
 
@@ -78,13 +78,13 @@ class Settings(BaseSettings):
     
     # Authentication
     auth: AuthConfig = Field(default_factory=AuthConfig)
-    auth_token: Optional[str] = Field(None, env="MCP_AUTH_TOKEN")
+    auth_token: Optional[str] = Field(None, alias="MCP_AUTH_TOKEN")
     
     # OAuth
-    github_client_id: Optional[str] = Field(None, env="GITHUB_CLIENT_ID")
-    github_client_secret: Optional[str] = Field(None, env="GITHUB_CLIENT_SECRET")
-    google_client_id: Optional[str] = Field(None, env="GOOGLE_CLIENT_ID")
-    google_client_secret: Optional[str] = Field(None, env="GOOGLE_CLIENT_SECRET")
+    github_client_id: Optional[str] = Field(None, alias="GITHUB_CLIENT_ID")
+    github_client_secret: Optional[str] = Field(None, alias="GITHUB_CLIENT_SECRET")
+    google_client_id: Optional[str] = Field(None, alias="GOOGLE_CLIENT_ID")
+    google_client_secret: Optional[str] = Field(None, alias="GOOGLE_CLIENT_SECRET")
     
     # Middleware
     middleware: MiddlewareConfig = Field(default_factory=MiddlewareConfig)
@@ -98,28 +98,34 @@ class Settings(BaseSettings):
     log_dir: Path = Field(default_factory=lambda: Path.home() / ".mcp_server_template" / "logs")
     
     # Database (optional)
-    database_url: Optional[str] = Field(None, env="DATABASE_URL")
+    database_url: Optional[str] = Field(None, alias="DATABASE_URL")
     
     # External APIs (optional)
-    openai_api_key: Optional[str] = Field(None, env="OPENAI_API_KEY")
-    anthropic_api_key: Optional[str] = Field(None, env="ANTHROPIC_API_KEY")
+    openai_api_key: Optional[str] = Field(None, alias="OPENAI_API_KEY")
+    anthropic_api_key: Optional[str] = Field(None, alias="ANTHROPIC_API_KEY")
     
-    @validator("data_dir", "log_dir", pre=False, always=True)
+    @field_validator("data_dir", "log_dir", mode="after")
+    @classmethod
     def create_directories(cls, v: Path) -> Path:
         """Create directories if they don't exist."""
         v.mkdir(parents=True, exist_ok=True)
         return v
     
-    @validator("server", pre=True)
-    def configure_server_by_environment(cls, v: Dict[str, Any], values: Dict[str, Any]) -> ServerConfig:
+    @model_validator(mode="before")
+    @classmethod
+    def configure_server_by_environment(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         """Configure server based on environment."""
-        if isinstance(v, ServerConfig):
-            return v
+        if not isinstance(values, dict):
+            return values
+            
+        server_config = values.get("server")
+        if isinstance(server_config, ServerConfig):
+            return values
             
         env = values.get("environment", Environment.DEVELOPMENT)
         
         if env == Environment.PRODUCTION:
-            return ServerConfig(
+            values["server"] = ServerConfig(
                 host="0.0.0.0",
                 port=8000,
                 workers=4,
@@ -127,7 +133,7 @@ class Settings(BaseSettings):
                 debug=False
             )
         elif env == Environment.STAGING:
-            return ServerConfig(
+            values["server"] = ServerConfig(
                 host="0.0.0.0",
                 port=8000,
                 workers=2,
@@ -135,13 +141,15 @@ class Settings(BaseSettings):
                 debug=False
             )
         else:  # Development
-            return ServerConfig(
+            values["server"] = ServerConfig(
                 host="localhost",
                 port=8000,
                 workers=1,
                 reload=True,
                 debug=True
             )
+        
+        return values
     
     def get_oauth_config(self, provider: str) -> Optional[Dict[str, Any]]:
         """Get OAuth configuration for a specific provider."""
